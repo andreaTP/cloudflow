@@ -71,7 +71,7 @@ class ResourceNamesSpec extends WordSpec with MustMatchers with GivenWhenThen wi
     val ingressRef = ingress.ref("shortingress")
     val egressRef  = egress.ref("shortegress")
 
-    val verifiedBlueprint2 = Blueprint()
+    val verifiedBlueprint = Blueprint()
       .define(Vector(ingress, egress))
       .use(ingressRef)
       .use(egressRef)
