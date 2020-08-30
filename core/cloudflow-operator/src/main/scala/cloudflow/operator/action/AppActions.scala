@@ -34,23 +34,46 @@ import skuber.PersistentVolumeClaim.VolumeMode
  * installed
  */
 object AppActions {
-  def apply(appId: String, namespace: String, labels: CloudflowLabels, ownerReferences: List[OwnerReference])(
+  def apply(app: CloudflowApplication.CR, namespace: String, labels: CloudflowLabels, ownerReferences: List[OwnerReference])(
       implicit ctx: DeploymentContext
   ): Seq[Action[ObjectResource]] = {
     val roleAkka  = akkaRole(namespace, labels, ownerReferences)
     val roleSpark = sparkRole(namespace, labels, ownerReferences)
     val roleFlink = flinkRole(namespace, labels, ownerReferences)
-    Vector(
-      Action.createOrUpdate(roleBinding(namespace, labels, ownerReferences), roleBindingEditor),
-      Action.createOrUpdate(roleAkka, roleEditor),
-      Action.createOrUpdate(roleSpark, roleEditor),
-      Action.createOrUpdate(roleFlink, roleEditor),
-      Action.createOrUpdate(akkaRoleBinding(namespace, roleAkka, labels, ownerReferences), roleBindingEditor),
-      Action.createOrUpdate(sparkRoleBinding(namespace, roleSpark, labels, ownerReferences), roleBindingEditor),
-      Action.createOrUpdate(flinkRoleBinding(namespace, roleFlink, labels, ownerReferences), roleBindingEditor),
-      CreatePersistentVolumeClaimAction(persistentVolumeClaim(appId, namespace, labels, ownerReferences))
+
+    val runnerTypes = extractRunnerTypes(app)
+    val akkaActions = if (runnerTypes.exists(_ == "akka")) {
+      Vector(
+        Action.createOrUpdate(roleAkka, roleEditor),
+        Action.createOrUpdate(akkaRoleBinding(namespace, roleAkka, labels, ownerReferences), roleBindingEditor)
+      )
+    } else Vector.empty
+
+    val sparkActions = if (runnerTypes.exists(_ == "spark")) {
+      Vector(
+        Action.createOrUpdate(roleSpark, roleEditor),
+        Action.createOrUpdate(sparkRoleBinding(namespace, roleSpark, labels, ownerReferences), roleBindingEditor)
+      )
+    } else Vector.empty
+
+    val flinkActions = if (runnerTypes.exists(_ == "flink")) {
+      Vector(
+        Action.createOrUpdate(roleFlink, roleEditor),
+        Action.createOrUpdate(flinkRoleBinding(namespace, roleFlink, labels, ownerReferences), roleBindingEditor)
+      )
+    } else Vector.empty
+
+    val pvcAction = if (runnerTypes.exists(runtime => runtime == "flink" || runtime == "spark")) {
+      Vector(CreatePersistentVolumeClaimAction(persistentVolumeClaim(app.spec.appId, namespace, labels, ownerReferences)))
+    } else Vector.empty
+
+    akkaActions ++ sparkActions ++ flinkActions ++ pvcAction ++ Vector(
+      Action.createOrUpdate(roleBinding(namespace, labels, ownerReferences), roleBindingEditor)
     )
   }
+
+  private def extractRunnerTypes(app: CloudflowApplication.CR) =
+    app.spec.streamlets.map(streamlet => streamlet.descriptor.runtime.name).distinct
 
   private def roleBinding(namespace: String, labels: CloudflowLabels, ownerReferences: List[OwnerReference]): RoleBinding =
     RoleBinding(

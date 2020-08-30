@@ -66,12 +66,12 @@ class ResourceNamesSpec extends WordSpec with MustMatchers with GivenWhenThen wi
     val image      = "image-1"
 
     val ingress = randomStreamlet().asIngress[Foo].withServerAttribute
-    val egress  = randomStreamlet().asEgress[Foo].withServerAttribute
+    val egress  = streamlet("sparkyStreamlet", "spark").asEgress[Foo].withServerAttribute
 
     val ingressRef = ingress.ref("shortingress")
     val egressRef  = egress.ref("shortegress")
 
-    val verifiedBlueprint = Blueprint()
+    val verifiedBlueprint2 = Blueprint()
       .define(Vector(ingress, egress))
       .use(ingressRef)
       .use(egressRef)
@@ -176,8 +176,7 @@ class ResourceNamesSpec extends WordSpec with MustMatchers with GivenWhenThen wi
 
   "PersistentVolumeClaim" should {
     "have long names truncate to 63 characters when coming from AppActions" in {
-      val appActions = AppActions(testApp02.spec.appId, namespace, CloudflowLabels(testApp02), testApp02.metadata.ownerReferences)
-
+      val appActions = AppActions(testApp02, namespace, CloudflowLabels(testApp02), testApp02.metadata.ownerReferences)
       appActions
         .collect {
           case a: ResourceAction[_] if a.resource.isInstanceOf[PersistentVolumeClaim] =>

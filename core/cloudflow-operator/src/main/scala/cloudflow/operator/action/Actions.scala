@@ -43,7 +43,7 @@ object Actions {
     require(currentApp.forall(_.spec.appId == newApp.spec.appId))
     val labels          = CloudflowLabels(newApp)
     val ownerReferences = CloudflowApplication.getOwnerReferences(newApp)
-    prepareNamespace(newApp.spec.appId, namespace, labels, ownerReferences) ++
+    prepareNamespace(newApp, namespace, labels, ownerReferences) ++
       deployTopics(newApp, currentApp, deleteOutdatedTopics) ++
       deployRunners(newApp, currentApp, namespace) ++
       // If an existing status is there, update status based on app (expected pod counts)
@@ -81,12 +81,12 @@ object Actions {
   }
 
   def prepareNamespace(
-      appId: String,
+      app: CloudflowApplication.CR,
       namespace: String,
       labels: CloudflowLabels,
       ownerReferences: List[OwnerReference]
   )(implicit ctx: DeploymentContext): Seq[Action[ObjectResource]] =
-    AppActions(appId, namespace, labels, ownerReferences)
+    AppActions(app, namespace, labels, ownerReferences)
 
   private def deployTopics(
       newApp: CloudflowApplication.CR,
