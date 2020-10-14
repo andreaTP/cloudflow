@@ -132,24 +132,27 @@ object ConfigurationScopeLayering {
                                                     streamletConfig: Config,
                                                     appConfig: Config,
                                                     clusterSecretConfigs: Map[String, Config]): Config = {
+    val defaultClusterConfig = clusterSecretConfigs.get(TopicActions.DefaultConfigurationName)
     val portMappingConfigs = deployment.portMappings.flatMap {
       case (port, topic) =>
         Try {
-          val portMappingConfig = if (appConfig.hasPath(s"$TopicsConfigPath.${topic.id}")) {
-            appConfig
-              .getConfig(s"$TopicsConfigPath.${topic.id}")
-              .withFallback(topic.config)
-          } else {
-            val clusterSecretConfig =
-              topic.cluster
-                .flatMap(clusterName => clusterSecretConfigs.get(clusterName))
-                .orElse(clusterSecretConfigs.get(TopicActions.DefaultConfigurationName))
-                .getOrElse(ConfigFactory.empty())
+          val portMappingConfig =
+            if (appConfig.hasPath(s"$TopicsConfigPath.${topic.id}")) {
+              appConfig
+                .getConfig(s"$TopicsConfigPath.${topic.id}")
+                .withFallback(topic.config)
+                .withFallback(defaultClusterConfig.getOrElse(ConfigFactory.empty()))
+            } else {
+              val clusterSecretConfig =
+                topic.cluster
+                  .flatMap(clusterName => clusterSecretConfigs.get(clusterName))
+                  .orElse(defaultClusterConfig)
+                  .getOrElse(ConfigFactory.empty())
 
-            appConfig
-              .withFallback(topic.config)
-              .withFallback(clusterSecretConfig)
-          }
+              appConfig
+                .withFallback(topic.config)
+                .withFallback(clusterSecretConfig)
+            }
 
           portMappingConfig
             .atPath(s"cloudflow.runner.streamlet.context.port_mappings.$port.config")
