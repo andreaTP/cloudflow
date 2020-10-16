@@ -90,7 +90,7 @@ object Operator {
 
   def handleConfigurationInput(
       client: KubernetesClient
-  )(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) = {
+  )(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext, ctx: DeploymentContext) = {
     val logAttributes  = Attributes.logLevels(onElement = Attributes.LogLevels.Info)
     val actionExecutor = new SkuberActionExecutor()
     // only watch secrets that contain input config
@@ -204,7 +204,7 @@ object Operator {
     val eventsResult = getCurrentEvents[O](client, options)
 
     Source
-      .fromFuture(eventsResult)
+      .future(eventsResult)
       .mapConcat(identity _)
       .concat(
         client

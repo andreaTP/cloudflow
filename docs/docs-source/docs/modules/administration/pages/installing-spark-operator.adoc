@@ -5,6 +5,8 @@
 
 include::ROOT:partial$include.adoc[]
 
+NOTE: See xref:installation-prerequisites.adoc#_storage_requirements_for_use_with_spark_or_flink[Storage requirements (for use with Spark or Flink)] to setup Storage Requirements for Spark applications.
+
 If you plan to write applications that utilize Spark, you will need to install the Spark operator before deploying your Cloudflow application.
 
 The only Cloudflow compatible Spark operator is a fork maintained by Lightbend.
@@ -41,7 +43,7 @@ resyncInterval: 30
 webhookPort: 8080
 sparkJobNamespace: ""
 operatorImageName: "lightbend/sparkoperator"
-operatorVersion: "2.0.7-cloudflow-spark-2.4.5-1.1.2-scala-2.12"
+operatorVersion: "2.0.11-cloudflow-spark-2.4.5-1.1.2-scala-2.12"
 ---
 kind: Service
 apiVersion: v1
@@ -52,7 +54,7 @@ metadata:
 spec:
   selector:
     app.kubernetes.io/name: sparkoperator
-    app.kubernetes.io/version: 2.0.7-cloudflow-spark-2.4.5-1.1.2-scala-2.12
+    app.kubernetes.io/version: 2.0.11-cloudflow-spark-2.4.5-1.1.2-scala-2.12
 EOF
 ----
 
@@ -105,7 +107,7 @@ spark-operator-sparkoperator-56d6ffc8cd-cln67       1/1     Running   0         
 
 For this, we will create yet another YAML file that we will apply to the cluster with `kubectl`:
 ----
-cat > spark-mutating-webhook.yaml << EOF
+cat > spark-mutating-webhook.yaml << 'EOF2'
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -148,14 +150,14 @@ spec:
               )
               echo $JSON
               kubectl patch MutatingWebhookConfiguration $HOOK_NAME -n cloudflow -p "$JSON"
-EOF
+EOF2
 ----
 
 Now we can apply the changes to the webhook:
 
   kubectl apply -f spark-mutating-webhook.yaml --namespace cloudflow
 
-That completes the installation of the Spark operator. You can check the result with the following command: 
+That completes the installation of the Spark operator. You can check the result with the following command:
 
 ----
 $ kubectl get pods -n cloudflow
@@ -170,7 +172,3 @@ spark-operator-sparkoperator-56d6ffc8cd-cln67       1/1     Running     0       
 If you plan to write applications that utilize Flink you will need to install the Flink operator before deploying your Cloudflow application.
 
 Continue with xref:installing-flink-operator.adoc[Adding Flink Support].
-
-== Next: Installing Enterprise components
-
-Continue with xref:installing-enterprise.adoc[]

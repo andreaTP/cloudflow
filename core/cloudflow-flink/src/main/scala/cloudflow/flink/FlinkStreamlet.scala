@@ -32,7 +32,7 @@ import org.apache.flink.streaming.api.environment.CheckpointConfig
 import org.apache.flink.streaming.api.scala._
 import cloudflow.streamlets.BootstrapInfo._
 import cloudflow.streamlets._
-import org.apache.flink.configuration.{ Configuration, RestOptions }
+import org.apache.flink.configuration.{ ConfigOptions, Configuration, RestOptions }
 import org.apache.flink.core.fs.FileSystem
 
 /**
@@ -81,7 +81,9 @@ abstract class FlinkStreamlet extends Streamlet[FlinkStreamletContext] with Seri
     } yield {
       val updatedConfig = streamletDefinition.config.withFallback(config)
       new FlinkStreamletContextImpl(streamletDefinition,
-                                    createExecutionEnvironment(updatedConfig, streamletDefinition.streamletRef),
+                                    updateStreamExecutionEnvironment(
+                                      createStreamExecutionEnvironment(updatedConfig, streamletDefinition.streamletRef)
+                                    ),
                                     updatedConfig)
     }).recoverWith {
       case th ⇒ Failure(new Exception(s"Failed to create context from $config", th))
@@ -117,29 +119,36 @@ abstract class FlinkStreamlet extends Streamlet[FlinkStreamletContext] with Seri
   }
 
   /**
+   * Override this method to modify the org.apache.flink.streaming.api.scala.StreamExecutionEnvironment used in this FlinkStreamlet.
+   * By default this method does not modify the StreamExecutionEnvironment.
+   */
+  def updateStreamExecutionEnvironment(env: StreamExecutionEnvironment): StreamExecutionEnvironment =
+    env
+
+  /**
    * Creates the Flink StreamExecutionEnvironment and by default sets up exactly-once checkpointing.
    * @see [[setupExecutionEnvironment]] to modify the StreamExecutionEnvironment that is created by this method.
    */
-  protected def createExecutionEnvironment(config: Config, streamlet: String): StreamExecutionEnvironment = {
+  protected def createStreamExecutionEnvironment(config: Config, streamlet: String): StreamExecutionEnvironment = {
 
     val localMode     = config.as[Option[Boolean]]("cloudflow.local").getOrElse(false)
     val runtimePath   = ClusterFlinkJobExecutor.flinkRuntime
     val streamletPath = ClusterFlinkJobExecutor.streamletRuntimeConfigPath(streamlet)
 
-    val env = if (localMode) {
-      val configuration = new Configuration()
-      populateFlinkConfiguration(
-        populateFlinkConfiguration(configuration, config, runtimePath),
-        config,
-        streamletPath
-      )
-      // Ensures that filesystem is initialized with right configuration
+    val configuration = populateFlinkConfiguration(
+      populateFlinkConfiguration(new Configuration(), config, runtimePath),
+      config,
+      streamletPath
+    )
+    // Ensures that if file system back end is used, it is initialized with the right configuration
+    if ("filesystem" == configuration.getString(ConfigOptions.key("state.backend").stringType().defaultValue("")))
       FileSystem.initialize(configuration, null)
+
+    val env = if (localMode) {
       // Create local Flink environment
       // Note here that a local web support is set through configuration by setting
       // "local.web" to true or on, either in the streamlet or Flink runtime context.
       if (isWebEnabled(config, streamletPath) || isWebEnabled(config, runtimePath)) {
-
         val localEnv = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(configuration)
         val port =
           if (configuration.contains(RestOptions.BIND_PORT))
@@ -227,9 +236,14 @@ abstract class FlinkStreamlet extends Streamlet[FlinkStreamletContext] with Seri
    */
   private case object LocalFlinkJobExecutor extends FlinkJobExecutor {
     def execute(): StreamletExecution = {
+
       log.info(s"Executing local mode ${context.streamletRef}")
       val jobResult = Future(createLogic.executeStreamingQueries(context.env))
-
+      jobResult.recoverWith {
+        case t: Throwable =>
+          log.error(t.getMessage, t)
+          Future.failed(t)
+      }
       new StreamletExecution {
         val readyFuture = readyPromise.future
 

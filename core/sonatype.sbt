@@ -18,10 +18,6 @@ ThisBuild / scmInfo := Some(
   )
 )
 
-ThisBuild / pomExtra := (
-  <url>https://github.com/lightbend/cloudflow</url>
-)
-
 ThisBuild / organizationName := "Lightbend Inc."
 ThisBuild / organizationHomepage := Some(url("https://www.lightbend.com/"))
 ThisBuild / homepage := Some(url("https://cloudflow.io"))
@@ -35,7 +31,6 @@ ThisBuild / description := "Cloudflow enables users to quickly develop, orchestr
 ThisBuild / pomIncludeRepository := { _ =>
   false
 }
-ThisBuild / publishTo := sonatypePublishToBundle.value
 
 ThisBuild / publishConfiguration := publishConfiguration.value.withOverwrite(true)
 ThisBuild / publishLocalConfiguration := publishLocalConfiguration.value.withOverwrite(true)

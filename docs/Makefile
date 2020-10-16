@@ -30,7 +30,22 @@ clean:
 
 build: clean html javascaladoc_staged print-site
 
-html: clean
+get-version:
+	# get latest tag
+	$(eval version=$(shell sh -c "git describe --abbrev=0 | sed 's/v//'"))
+	# query bintray for the corresponding artifact version
+	$(eval bintray_version=$(shell sh -c "wget -qO - https://api.bintray.com/packages/lightbend/cloudflow-cli/kubectl-cloudflow | jq -r '.versions[] | select( . | startswith(\"${version}.\") )'"))
+
+set-antora-versions: get-version
+	yq write shared-content-source/docs/base-antora.yml version "${version}" > shared-content-source/docs/antora.yml
+	yq write ../examples/snippets/base-antora.yml version "${version}" > ../examples/snippets/antora.yml
+
+	yq write docs-source/base-author-mode-site.yml 'asciidoc.attributes.cloudflow-version' "${version}" > docs-source/author-mode-site.yml
+	yq write -i docs-source/author-mode-site.yml 'asciidoc.attributes.cloudflow-examples-version' "${version}"
+	yq write -i docs-source/author-mode-site.yml 'asciidoc.attributes.cloudflow-branch-version' "v${version}"
+	yq write -i docs-source/author-mode-site.yml 'asciidoc.attributes.kubectl-plugin-version' "${bintray_version}"
+
+html: clean set-antora-versions
 	docker run \
 		-u $(shell id -u):$(shell id -g) \
 		--privileged \
@@ -42,7 +57,7 @@ html: clean
 		docs/docs-source/site.yml
 	@echo "Done"
 
-html-author-mode: clean
+html-author-mode: clean set-antora-versions
 	docker run \
 		-u $(shell id -u):$(shell id -g) \
 		-v ${ROOT_DIR}:/antora \
@@ -58,9 +73,9 @@ check-links:
 		-v ${ROOT_DIR}:/antora \
 		--rm \
 		--entrypoint /bin/sh \
-		-t ${antora_docker_image}:${antora_docker_image_tag} \
+		-t lightbend/antora-doc:0.1.0 \
 		--cache-dir=./.cache/antora \
-		-c 'find /antora/docs-source -name '*.adoc' -print0 | xargs -0 -n1 asciidoc-link-check -p -c docs-source/asciidoc-link-check-config.json'
+		-c 'find docs/docs-source -name '*.adoc' -print0 | xargs -0 -n1 asciidoc-link-check -p -c docs/docs-source/asciidoc-link-check-config.json'
 
 list-todos: html
 	docker run \

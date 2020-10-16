@@ -26,6 +26,7 @@ lazy val taxiRidePipeline = appModule("taxi-ride-pipeline")
   .settings(
     name := "taxi-ride-fare",
     runLocalConfigFile := Some("taxi-ride-pipeline/src/main/resources/local.conf"),
+    runLocalLog4jConfigFile := Some("taxi-ride-pipeline/src/main/resources/log4j.properties"),
   )
 
 lazy val datamodel = appModule("datamodel")
@@ -101,3 +102,5 @@ lazy val commonSettings = Seq(
   scalacOptions in (Compile, console) --= Seq("-Ywarn-unused", "-Ywarn-unused-import"),
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
 )
+
+dynverSeparator in ThisBuild := "-"

@@ -12,7 +12,54 @@ val javadocDisabledFor = Set(
   // '@throws' in scaladoc but there is now 'throws' clause on the method
   "/cloudflow-streamlets/target/java/cloudflow/streamlets/StreamletContext.java",
   "/cloudflow-akka/target/java/cloudflow/akkastream/AkkaStreamletLogic.java",
-  "/cloudflow-spark/target/java/cloudflow/spark/SparkStreamletLogic.java"
+  "/cloudflow-spark/target/java/cloudflow/spark/SparkStreamletLogic.java",
+  // from JDK 11 failures
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/TestContext$.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/TestContext.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/TestContextException$.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/TestContextException.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/javadsl/Completed.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/javadsl/ConfigParameterValueImpl$.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/javadsl/ConfigParameterValueImpl.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/javadsl/Failed$.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/javadsl/Failed.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/scaladsl/Completed.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/scaladsl/ConfigParameterValueImpl$.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/scaladsl/ConfigParameterValueImpl.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/scaladsl/Failed$.java",
+  "/cloudflow-akka-testkit/target/java/cloudflow/akkastream/testkit/scaladsl/Failed.java",
+  "/cloudflow-akka/target/java/cloudflow/akkastream/AkkaStreamletRuntime.java",
+  "/cloudflow-akka/target/java/cloudflow/akkastream/Earliest.java",
+  "/cloudflow-akka/target/java/cloudflow/akkastream/Latest.java",
+  "/cloudflow-spark-testkit/target/java/cloudflow/spark/testkit/ExecutionReport.java",
+  "/cloudflow-spark-testkit/target/java/cloudflow/spark/testkit/QueryExecutionMonitor.java",
+  "/cloudflow-spark-testkit/target/java/cloudflow/spark/testkit/SparkStreamletTestkit.java",
+  "/cloudflow-spark-testkit/target/java/cloudflow/spark/testkit/TestContextException.java",
+  "/cloudflow-spark/target/java/cloudflow/spark/SparkStreamletRuntime.java",
+  "/cloudflow-spark/target/java/cloudflow/spark/avro/EncodedKV.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/AkkaClusterAttribute.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/BooleanValidationType.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/BootstrapServersForTopicNotFound.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/DecodeException.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/DoubleValidationType.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/Dun.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/DurationValidationType.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/ExceptionAcc.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/IntegerValidationType.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/LoadedStreamlet.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/MemorySizeValidationType.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/PortMapping.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/ReadOnlyMany.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/ReadWriteMany.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/RegexpValidationType.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/SchemaDefinition.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/ServerAttribute.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/StreamletContextData.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/StreamletLoader.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/StreamletShapeImpl.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/TopicForPortNotFoundException.java",
+  "/cloudflow-streamlets/target/java/cloudflow/streamlets/descriptors/VolumeMountDescriptor.java",
+  "/cloudflow/cloudflow/core/cloudflow-spark/target/java/cloudflow/spark/kafka/EncodedKV.java"
 )
 
 lazy val root =
@@ -39,7 +86,6 @@ lazy val root =
     .settings(commonSettings)
     .aggregate(
       streamlets,
-      events,
       akkastream,
       akkastreamUtil,
       akkastreamTestkit,
@@ -69,22 +115,6 @@ lazy val streamlets =
             Bijection,
             ScalaPbRuntime,
             ScalaTest
-          )
-    )
-
-lazy val events =
-  cloudflowModule("cloudflow-events")
-    .enablePlugins(BuildInfoPlugin, ScalafmtPlugin)
-    .dependsOn(streamlets)
-    .settings(
-      scalafmtOnCompile := true,
-      libraryDependencies ++= Vector(
-            AkkaStream,
-            Ficus,
-            Skuber,
-            Logback % Test,
-            ScalaTest,
-            MockitoScala
           )
     )
 
@@ -194,7 +224,6 @@ lazy val spark =
     .settings(
       scalafmtOnCompile := true,
       // Prevent incompatible version of jackson-databind
-      dependencyOverrides += SparkJacksonDatabind,
       libraryDependencies ++= Seq(
             AkkaActor,
             AkkaDiscovery,
@@ -206,8 +235,12 @@ lazy val spark =
             SparkSql,
             SparkSqlKafka,
             SparkStreaming,
+            SparkProto,
             ScalaTest
-          )
+          ),
+      dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.11.2" ,
+      dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.2",
+      dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.11.2"
     )
     .settings(
       (sourceGenerators in Test) += (avroScalaGenerateSpecific in Test).taskValue
@@ -220,11 +253,13 @@ lazy val sparkTestkit =
     .settings(
       scalafmtOnCompile := true,
       // Prevent incompatible version of jackson-databind
-      dependencyOverrides += SparkJacksonDatabind,
       libraryDependencies ++= Vector(
             ScalaTestUnscoped,
             Junit
-          )
+          ),
+      dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.11.2" ,
+      dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.2",
+      dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.11.2"
     )
 
 lazy val sparkTests =
@@ -234,11 +269,13 @@ lazy val sparkTests =
     .settings(
       scalafmtOnCompile := true,
       // Prevent incompatible version of jackson-databind
-      dependencyOverrides += SparkJacksonDatabind,
       libraryDependencies ++= Vector(
             ScalaTest,
             Junit
-          )
+          ),
+      dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.11.2" ,
+      dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.11.2",
+      dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.12" % "2.11.2"
     )
     .settings(
       (sourceGenerators in Test) += (avroScalaGenerateSpecific in Test).taskValue
@@ -330,7 +367,7 @@ lazy val blueprint =
 lazy val plugin =
   cloudflowModule("sbt-cloudflow")
     .dependsOn(streamlets, blueprint)
-    .enablePlugins(BuildInfoPlugin, ScalafmtPlugin)
+    .enablePlugins(BuildInfoPlugin, ScalafmtPlugin, SbtPlugin)
     .settings(
       scalafmtOnCompile := true,
       sbtPlugin := true,
@@ -351,15 +388,19 @@ lazy val plugin =
             Logback               % Test,
             "com.github.mutcianm" %% "ascii-graphs" % "0.0.6",
             ScalaTest
-          )
+          ),
+      scriptedLaunchOpts := { scriptedLaunchOpts.value ++
+        Seq("-Xmx1024M", "-Dplugin.version=" + version.value)
+      },
+      scriptedBufferLog := false
     )
 
 lazy val runner =
   cloudflowModule("cloudflow-runner")
     .enablePlugins(BuildInfoPlugin, ScalafmtPlugin)
-    //TODO removed events for Flink Akka 2.6 conflict, will need to find a way to put it back.
-    .dependsOn(streamlets,
-               blueprint //events
+    .dependsOn(
+      streamlets,
+      blueprint
     )
     .settings(
       scalafmtOnCompile := true,
@@ -400,7 +441,6 @@ lazy val operator =
     .enablePlugins(
       sbtdocker.DockerPlugin,
       JavaAppPackaging,
-      BuildNumberPlugin,
       BuildInfoPlugin,
       ScalafmtPlugin
     )
@@ -408,16 +448,16 @@ lazy val operator =
     .settings(
       scalafmtOnCompile := true,
       libraryDependencies ++= Vector(
-            AkkaSlf4jOperator,
-            AkkaStreamOperator,
+            AkkaSlf4j,
+            AkkaStream,
             Ficus,
             Logback,
             Skuber,
             ScalaTest,
-            "org.apache.kafka"        % "kafka-clients" % Version.KafkaClients,
-            AkkaStreamTestkitOperator % "test",
-            ScalaCheck                % "test",
-            Avro4sJson                % "test"
+            "org.apache.kafka" % "kafka-clients" % Version.KafkaClients,
+            AkkaStreamTestkit  % "test",
+            ScalaCheck         % "test",
+            Avro4sJson         % "test"
           )
     )
     .settings(
@@ -428,10 +468,6 @@ lazy val operator =
       mainClass in Compile := Some("cloudflow.operator.Main"),
       publishArtifact in (Compile, packageDoc) := false,
       publishArtifact in (Compile, packageSrc) := false,
-      // skuber version 2.4.0 depends on akka-http 10.1.9 : hence overriding
-      // with akka-http 10.1.12 to use akka 2.6
-      // remove this override once skuber is updated
-      dependencyOverrides += AkkaHttpOperator,
       buildOptions in docker := BuildOptions(
             cache = true,
             removeIntermediateContainers = BuildOptions.Remove.OnSuccess,
@@ -446,7 +482,7 @@ lazy val operator =
               registry = None,
               namespace = Some("lightbend"),
               repository = "cloudflow-operator",
-              tag = Some(cloudflowBuildNumber.value.asVersion)
+              tag = Some((ThisBuild / version).value)
             )
           ),
       dockerfile in docker := {
@@ -531,13 +567,8 @@ lazy val commonSettings = bintraySettings ++ Seq(
               inquireVersions,
               runClean,
               runTest,
-              setReleaseVersion,
-              commitReleaseVersion,
-              tagRelease,
               releaseStepCommandAndRemaining("publishSigned"),
               releaseStepCommand("sonatypeBundleRelease"),
-              setNextVersion,
-              commitNextVersion,
               pushChanges
             ),
         unidocGenjavadocVersion := "0.16",
@@ -573,7 +604,10 @@ lazy val commonSettings = bintraySettings ++ Seq(
         resolvers += Resolver.url("cloudflow", url("https://lightbend.bintray.com/cloudflow"))(Resolver.ivyStylePatterns),
         resolvers += "Akka Snapshots".at("https://repo.akka.io/snapshots/"),
         scalacOptions in (Compile, console) := (scalacOptions in (Global)).value.filter(_ == "-Ywarn-unused-import"),
-        scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
+        scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
+        publishTo := sonatypePublishToBundle.value
       )
 
 releaseIgnoreUntrackedFiles := true
+// https://github.com/dwijnand/sbt-dynver#portable-version-strings
+dynverSeparator in ThisBuild := "-"

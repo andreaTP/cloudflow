@@ -21,8 +21,7 @@ import cloudflow.blueprint.deployment.{ PrometheusConfig, StreamletDeployment }
 import cloudflow.operator.{ CloudflowApplication, CloudflowApplicationSpecBuilder, TestDeploymentContext }
 import com.typesafe.config.ConfigFactory
 import org.scalatest._
-import play.api.libs.json._
-import skuber._
+import skuber.{ Volume, _ }
 
 class AkkaRunnerSpec extends WordSpecLike with OptionValues with MustMatchers with GivenWhenThen with TestDeploymentContext {
 
@@ -65,12 +64,12 @@ class AkkaRunnerSpec extends WordSpecLike with OptionValues with MustMatchers wi
 
     val deployment = StreamletDeployment(
       name = appId,
-      runtime = "spark",
+      runtime = "akka",
       image = image,
-      streamletName = "spark-streamlet",
+      streamletName = "akka-streamlet",
       className = "cloudflow.operator.runner.AkkaRunner",
       endpoint = None,
-      secretName = "spark-streamlet",
+      secretName = "akka-streamlet",
       config = ConfigFactory.empty(),
       portMappings = Map.empty,
       volumeMounts = None,
@@ -88,10 +87,10 @@ class AkkaRunnerSpec extends WordSpecLike with OptionValues with MustMatchers wi
             cloudflow.operator.event.ConfigInputChangeEvent.PodsConfigDataKey ->
                 """
                 |kubernetes.pods.pod {
-                | labels: {
-                |            "key1" : "value1",
-                |            "key2" : "value2"
-                |          }
+                | labels {
+                |    "key1" : "value1",
+                |    "key2" : "value2"
+                | }
                 | containers.container {
                 |  env = [
                 |    {
@@ -109,6 +108,60 @@ class AkkaRunnerSpec extends WordSpecLike with OptionValues with MustMatchers wi
 
       crd.spec.get.template.metadata.labels.get("key1") mustBe Some("value1")
       crd.spec.get.template.metadata.labels.get("key2") mustBe Some("value2")
+
+    }
+
+    "read from config custom secrets and mount them" in {
+
+      val crd = AkkaRunner.resource(
+        deployment = deployment,
+        app = app,
+        configSecret = Secret(
+          metadata = ObjectMeta(),
+          data = Map(
+            cloudflow.operator.event.ConfigInputChangeEvent.PodsConfigDataKey ->
+                """
+              |kubernetes.pods.pod {
+              |   volumes {
+              |     foo {
+              |       secret {
+              |         name = mysecret
+              |       }
+              |     },
+              |     bar {
+              |       secret {
+              |         name = yoursecret
+              |       }
+              |     }
+              |   }
+              |   containers.container {
+              |     volume-mounts {
+              |       foo {
+              |         mount-path = "/etc/my/file"
+              |         read-only = true
+              |       },
+              |       bar {
+              |         mount-path = "/etc/mc/fly"
+              |         read-only =  false
+              |       }
+              |     }
+              |   }
+              |}
+                """.stripMargin.getBytes()
+          )
+        ),
+        namespace = namespace
+      )
+
+      crd.spec.get.template.spec.get.volumes must contain allElementsOf List(
+        Volume("foo", Volume.Secret(secretName = "mysecret")),
+        Volume("bar", Volume.Secret(secretName = "yoursecret"))
+      )
+
+      crd.spec.get.template.spec.get.containers.head.volumeMounts must contain allElementsOf List(
+        Volume.Mount("foo", "/etc/my/file", true),
+        Volume.Mount("bar", "/etc/mc/fly", false)
+      )
 
     }
   }
