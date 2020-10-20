@@ -24,9 +24,9 @@ asciidoc:
     # review: ''
     # todo: ''
     doc-title: 'Cloudflow Guide'
-    cloudflow-version: 0.0.4-SNAP
-    cloudflow-examples-version: 0.0.4-SNAP
-    cloudflow-branch-version: v0.0.4-SNAP
+    cloudflow-version: 0.0.5-SNAP
+    cloudflow-examples-version: 0.0.5-SNAP
+    cloudflow-branch-version: v0.0.5-SNAP
     kubectl-plugin-version:
 output:
   dir: ./../target/staging
