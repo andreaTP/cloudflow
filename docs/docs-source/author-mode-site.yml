@@ -27,9 +27,9 @@ asciidoc:
     review: ''
     todo: ''
     doc-title: 'Cloudflow Guide'
-    cloudflow-version: 0.0.1-SNAPSHOT
-    cloudflow-examples-version: 0.0.1-SNAPSHOT
-    cloudflow-branch-version: v0.0.1-SNAPSHOT
+    cloudflow-version: 0.0.3-SNAPSHOT
+    cloudflow-examples-version: 0.0.3-SNAPSHOT
+    cloudflow-branch-version: v0.0.3-SNAPSHOT
     kubectl-plugin-version:
 output:
   dir: ./../target/staging
